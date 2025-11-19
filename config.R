@@ -34,8 +34,8 @@ QUIET <- FALSE
 
 CRS <- 2249
 
-OC_PATH <- '2024-04-12'
-GDB_PATH <- "L3_AGGREGATE_FGDB_20240703"
+OC_PATH <- 'K:/DataServices/Datasets/OpenCorporates'
+GDB_PATH <- "L3_AGGREGATE_FGDB_20250701"
 
 DATA_PATH <- "data"
 RESULTS_PATH <- "results"
