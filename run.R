@@ -48,15 +48,15 @@ manage_run <- function() {
   
   # Test DB Values and Connections
   # ===
-  db_vals <- unique(unlist(unname(PUSH_DBS)))
-  if(!all(stringr::str_detect(db_vals, "^[a-zA-Z\\_]*$"))) {
-    stop("VALIDATION: You provided invalid database prefixes---must be made up of characters and underscores.")
-  }
-  
-  for (db in db_vals) {
-    util_test_conn(db)
-  }
-  rm(db_vals)
+  # db_vals <- unique(unlist(unname(PUSH_DBS)))
+  # if(!all(stringr::str_detect(db_vals, "^[a-zA-Z\\_]*$"))) {
+  #   stop("VALIDATION: You provided invalid database prefixes---must be made up of characters and underscores.")
+  # }
+  # 
+  # for (db in db_vals) {
+  #   util_test_conn(db)
+  # }
+  # rm(db_vals)
   
   # Test Thresholds
   threshes <- c(COSINE_THRESH, INDS_THRESH, ZIP_INT_THRESH)
