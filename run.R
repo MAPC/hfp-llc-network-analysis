@@ -79,16 +79,16 @@ manage_run <- function() {
   # Test OC Path
   
   if (!is.null(OC_PATH)) {
-    oc_exists <- dir.exists(file.path(DATA_PATH, OC_PATH))
+    oc_exists <- dir.exists(OC_PATH)
     if (!oc_exists) {
       stop("VALIDATION: You provided an invalid OC_PATH. Check config.R.")
     } else {
       companies_exist <- any(stringr::str_detect(
-        list.files(file.path(DATA_PATH, OC_PATH)), 
+        list.files(OC_PATH), 
         "companies.csv"
         ))
       officers_exist <- any(stringr::str_detect(
-        list.files(file.path(DATA_PATH, OC_PATH)), 
+        list.files(OC_PATH), 
         "officers.csv"
       ))
       if(!(companies_exist & officers_exist)) {
@@ -104,8 +104,8 @@ manage_run <- function() {
   }
   
   # Test GDB Path
-  as_file <- file.exists(file.path(DATA_PATH, GDB_PATH))
-  as_folder <- dir.exists(file.path(DATA_PATH, GDB_PATH))
+  as_file <- file.exists(GDB_PATH)
+  as_folder <- dir.exists(GDB_PATH)
   
   if(!as_file & !as_folder) {
     stop("VALIDATION: You provided an invalid GDB_PATH. Check config.R.")
