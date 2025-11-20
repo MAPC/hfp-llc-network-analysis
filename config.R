@@ -35,7 +35,7 @@ QUIET <- FALSE
 CRS <- 2249
 
 OC_PATH <- 'K:/DataServices/Datasets/OpenCorporates'
-GDB_PATH <- "L3_AGGREGATE_FGDB_20250701"
+GDB_PATH <- "K:/DataServices/Datasets/Parcel_DB/Archive/L3_AGGREGATE_FGDB_20250701.zip"
 
 DATA_PATH <- "data"
 RESULTS_PATH <- "results"
