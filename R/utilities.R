@@ -147,11 +147,17 @@ util_test_conn <- function(prefix="") {
     prefix <- stringr::str_c(stringr::str_to_upper(prefix), "DB", sep="_")
   }
   dbname <- Sys.getenv(stringr::str_c(prefix, "NAME", sep="_"))
+  print(dbname)
   host <- Sys.getenv(stringr::str_c(prefix, "HOST", sep="_"))
+  print(host)
   port <- Sys.getenv(stringr::str_c(prefix, "PORT", sep="_"))
+  print(port)
   user <- Sys.getenv(stringr::str_c(prefix, "USER", sep="_"))
+  print(user)
   pass <- Sys.getenv(stringr::str_c(prefix, "PASS", sep="_"))
+  print(pass)
   ssl <- Sys.getenv(stringr::str_c(prefix, "SSL", sep="_"))
+  print(ssl)
   if (any(c(dbname, host, port, user) == "")) {
     stop(glue::glue("VALIDATION: Can't find '{prefix}' credentials in .Renviron!"))
   } 
