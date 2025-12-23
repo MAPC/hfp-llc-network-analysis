@@ -12,7 +12,7 @@ manage_run <- function() {
   # ===
   
   if (COMPLETE_RUN) {
-    REFRESH <- TRUE
+    REFRESH <- FALSE #need to change to TRUE if there is updated data
     COMPANY_TEST <- FALSE
     MUNI_IDS <- NULL
     ROUTINES <- list(
@@ -24,7 +24,6 @@ manage_run <- function() {
   
   # Open Log
   # ===
-  
   lf <- logr::log_open(
     format(Sys.time(), "%Y-%m-%d_%H%M%S"),
     logdir = TRUE
@@ -117,7 +116,8 @@ manage_run <- function() {
     if(
       !any(
         stringr::str_detect(
-          list.files(file.path(DATA_PATH, GDB_PATH)), 
+         # list.files(file.path(DATA_PATH, GDB_PATH)), 
+          list.files(file.path(GDB_PATH)),
           ".gdb")
         )
     ) {
