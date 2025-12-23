@@ -2,7 +2,7 @@
 
 COMPLETE_RUN <- FALSE
 
-REFRESH <- TRUE
+REFRESH <- FALSE #need to change to TRUE if there is updated data
 
 PUSH_DBS <- list(
   load = "",
@@ -16,7 +16,7 @@ ROUTINES <- list(
   dedupe = TRUE
 )
 
-MUNI_IDS <- c(274, 49, 35)
+MUNI_IDS <- c("274", "049", "035") # need quotes to not lose leading 0s,  if NULL runs for all munis
 
 MOST_RECENT <- FALSE
 
@@ -30,12 +30,22 @@ INDS_THRESH <- 0.95
 
 ZIP_INT_THRESH <- 1
 
-QUIET <- FALSE
+QUIET <- TRUE #FALSE
 
 CRS <- 2249
 
 OC_PATH <- 'K:/DataServices/Datasets/OpenCorporates'
-GDB_PATH <- "K:/DataServices/Datasets/Parcel_DB/Archive/L3_AGGREGATE_FGDB_20250701.zip"
+GDB_PATH <- "H:/Parcel Data"
+
+## code added to help successful unzip - only need to run this once then comment out
+# Source - https://stackoverflow.com/a
+# Posted by Deset, modified by community. See post 'Timeline' for change history
+# Retrieved 2025-12-22, License - CC BY-SA 3.0
+
+# zipF<- "C:/Users/aderosa/Downloads/L3_AGGREGATE_FGDB_20250701.zip"
+# outDir<- "H:/Parcel Data"
+# unzip(zipF,exdir=outDir)
+
 
 DATA_PATH <- "data"
 RESULTS_PATH <- "results"
