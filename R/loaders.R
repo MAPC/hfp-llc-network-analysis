@@ -1,3 +1,7 @@
+# Load libraries
+library(logr)
+library(DBI)
+
 # Load Helpers ====
 
 load_vintage_select <- function(gdb_path, most_recent = FALSE, muni_ids=NULL, recent = 3) {
@@ -21,10 +25,11 @@ load_vintage_select <- function(gdb_path, most_recent = FALSE, muni_ids=NULL, re
     fy = as.numeric(stringr::str_extract(gdb_list, "(?<=_FY)[0-9]{2}")) + 2000,
     cy = as.numeric(stringr::str_extract(gdb_list, "(?<=_CY)[0-9]{2}")) + 2000
   )
-  
+#  util_log_message(length(vintages))
   if (!is.null(muni_ids)) {
     vintages <- vintages |>
       dplyr::filter(muni_id %in% muni_ids)
+    
   }
   
   if (most_recent) {
@@ -35,20 +40,21 @@ load_vintage_select <- function(gdb_path, most_recent = FALSE, muni_ids=NULL, re
       dplyr::ungroup()
     return(vintages)
   }
+#  util_log_message(nrow(vintages))
 
   most_complete_recent <- vintages |>
-    dplyr::filter(fy > lubridate::year(Sys.Date()) - recent) |>
+    dplyr::filter(fy > lubridate::year(Sys.Date()) - recent) |> #this is the log warning error
     dplyr::group_by(fy) |>
     dplyr::tally() |>
     dplyr::ungroup() |>
-    dplyr::filter(
-      n == max(n)
-    ) |>
-    dplyr::filter(
-      fy == max(fy)
-    ) |>
-    dplyr::pull(fy)
-
+  dplyr::filter(
+    n == max(n)
+  ) |>
+  dplyr::filter(
+    fy == max(fy)
+  ) |>
+   dplyr::pull(fy)
+  
   vintages <- vintages |>
     dplyr::group_by(muni_id) |>
     dplyr::mutate(
@@ -58,14 +64,14 @@ load_vintage_select <- function(gdb_path, most_recent = FALSE, muni_ids=NULL, re
         .default = FALSE
       )
     )
-
+  
   exact_matches <- vintages |>
     dplyr::filter(load) |>
     dplyr::mutate(
       count = dplyr::n()
     ) |>
     dplyr::filter(count == 1 | (count > 1 & cy == max(cy)))
-
+  
   unmatched <- vintages |>
     dplyr::filter(!load & min(year_diff) > 0)
 
@@ -81,10 +87,15 @@ load_vintage_select <- function(gdb_path, most_recent = FALSE, muni_ids=NULL, re
       dplyr::filter(count == 1 | (count > 1 & cy == max(cy))) |>
       dplyr::select(-min_diff)
   }
+  
   exact_matches |>
     dplyr::bind_rows(unmatched) |>
     dplyr::ungroup() |>
     dplyr::select(-c(year_diff, load, count))
+  
+  util_log_message(nrow(vintages))
+  return(vintages) #added 12/22
+  util_log_message("load_vintage_select run complete; returned vintages df")
 }
 
 load_gdb_is_file <- function(path) {
@@ -302,6 +313,7 @@ load_write <- function(df,
       idx_q
     )
   } else {
+    df <- as.data.frame(df) # added 12/23
     DBI::dbWriteTable(
       conn=conn,
       name=table_name,
@@ -310,22 +322,29 @@ load_write <- function(df,
       append=append
     )
   }
+  util_log_message("load_write run 1")
   if(!is.null(id_col)) {
+    util_log_message("load_write run 2")
     DBI::dbExecute(
       conn,
       statement=glue::glue("ALTER TABLE {table_name} ADD PRIMARY KEY ({stringr::str_c(id_col, collapse=', ')});")
     )
+    util_log_message("load_write run 3")
   }
   if ("csv" %in% other_formats) {
+    util_log_message("load_write run 4")
     readr::write_csv(df, csv_file, append=!overwrite)
   }
   if ("gpkg" %in% other_formats) {
+    util_log_message("load_write run 5")
     sf::st_write(df, gpkg_file, layer=table_name, delete_layer=overwrite)
   }
   if ("r" %in% other_formats) {
+    util_log_message("load_write run 6")
     save(df, file=r_file)
   }
   df
+  util_log_message("load_write run complete")
 }
 
 load_postgis_read <- function(conn, table_name, muni_ids = NULL) {
@@ -384,19 +403,24 @@ load_read_write <- function(conn, table_name, loader, id_col=NULL, muni_ids=NULL
   #' @return Unmodified data frame.
   #' 
   #' @export
-  
+  util_log_message("load_read_write run 1")
   # Disconnect on function exit.
   on.exit(DBI::dbDisconnect(conn))
-  
+  util_log_message("load_read_write run 2")
   table_exists <- util_check_for_tables(conn, table_name)
+  util_log_message("load_read_write run 3")
+  util_log_message(table_name)
   
   if (!is.null(muni_ids) & table_exists) {
+    util_log_message("load_read_write run 4")
     muni_ids_exist <- load_check_for_muni_ids(conn, table_name, muni_ids)
   } else {
+    util_log_message("load_read_write run 5")
     muni_ids_exist <- TRUE
   }
   
   if(!table_exists | refresh) {
+    util_log_message("load_read_write run 6")
     if(!quiet){
       if(!table_exists) {
         util_log_message(
@@ -412,9 +436,11 @@ load_read_write <- function(conn, table_name, loader, id_col=NULL, muni_ids=NULL
         )
       }
     }
+    
     df <- loader |>
-      load_write(conn, table_name=table_name, id_col=id_col, overwrite=refresh, quiet=quiet)
+      load_write(conn, table_name=table_name, id_col=id_col, overwrite=refresh, quiet=quiet) #here is the issue
   } else if (muni_ids_exist) {
+    util_log_message("load_read_write run 7")
     if(!quiet) {
       util_log_message(
         glue::glue(
@@ -424,6 +450,7 @@ load_read_write <- function(conn, table_name, loader, id_col=NULL, muni_ids=NULL
     }
     df <- load_postgis_read(conn, table_name=table_name, muni_ids)
   } else {
+    util_log_message("load_read_write run 8")
     if(!quiet) {
       util_log_message(
         glue::glue(
@@ -434,7 +461,9 @@ load_read_write <- function(conn, table_name, loader, id_col=NULL, muni_ids=NULL
     df <- loader |>
       load_write(conn, table_name=table_name, id_col=id_col, overwrite=TRUE, quiet=quiet)
   }
+  util_log_message("load_read_write run 9")
   df
+  util_log_message("load_read_write() run complete")
 }
 
 # Preprocess Layers ====
@@ -619,6 +648,7 @@ load_assess_preprocess <- function(df, path) {
     dplyr::ungroup() 
   # |>
   #   dplyr::filter(!is.na(site_loc_id))
+  util_log_message("load_assess_preprocess() run complete")
 }
 
 # Load Layers from Source ====
@@ -678,7 +708,7 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
     "USE_CODE AS SITE_USE_CODE"
   )
   cols <- stringr::str_c(cols, collapse = ", ")
-  
+  util_log_message("cols <- stringr::str_c run")
   if(!quiet) {
     util_log_message(glue::glue("INPUT/OUTPUT: Loading assessors' records."))
   }
@@ -687,6 +717,7 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
   
   if (single_gdb) {
     q <- stringr::str_c("SELECT", cols, "FROM L3_ASSESS", sep = " ")
+    util_log_message("1 q <- stringr::str_c run")
     if (!is.null(muni_ids)) {
       q <- stringr::str_c(
         q,
@@ -695,6 +726,7 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
         ")",
         sep = " "
       )
+      util_log_message("2 q <- stringr::str_c run")
     }
     
     df <- sf::st_read(
@@ -704,7 +736,8 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
       )
   } else {
     if (!quiet) {
-      util_log_message(glue::glue("INPUT/OUTPUT: Reading from collection of GDBs.")) 
+      util_log_message(glue::glue("INPUT/OUTPUT: Reading from collection of GDBs."))
+      
     }
     if (is.null(fy) & is.null(cy)) {
       vintages <- load_vintage_select(gdb_path, muni_ids, most_recent=most_recent)
@@ -720,10 +753,10 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
     
     all <- list()
     for (row in 1:nrow(vintages)) {
+      
       muni_id <- vintages[[row, 'muni_id']]
       cy <- vintages[[row, 'cy']] - 2000
       fy <- vintages[[row, 'fy']] - 2000
-      
       if (!quiet) {
         util_log_message(glue::glue("INPUT/OUTPUT: Loading assessors records for muni {muni_id} (FY{fy}, CY{cy}).")) 
       }
@@ -734,7 +767,7 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
       }
       
       q <- stringr::str_c("SELECT", cols, glue::glue("FROM M{muni_id}Assess"), sep = " ")
-      
+      util_log_message("3 q <- stringr::str_c run")
       all[[muni_id]] <- sf::st_read(
         file.path(gdb_path, file),
         query = q,
@@ -746,6 +779,8 @@ load_assess <- function(path, gdb_path, fy = NULL, cy = NULL, muni_ids=NULL, mos
   dplyr::bind_rows(all) |>
     dplyr::rename_with(stringr::str_to_lower) |>
     load_assess_preprocess(path)
+  
+  util_log_message("load_assess() run complete")
 }
 
 load_parcels <- function(gdb_path, crs, assess, block_groups, muni_ids=NULL, most_recent = FALSE, quiet=FALSE) {
@@ -783,6 +818,7 @@ load_parcels <- function(gdb_path, crs, assess, block_groups, muni_ids=NULL, mos
         ")",
         sep = " "
       )
+      util_log_message("4 q <- stringr::str_c run")
     }
     
     sf::st_read(gdb_path, query = q, quiet = TRUE)
@@ -843,6 +879,7 @@ load_parcels <- function(gdb_path, crs, assess, block_groups, muni_ids=NULL, mos
     dplyr::mutate(
       tract_id = stringr::str_sub(block_group_id, start = 1L, end = 11L)
     )
+  util_log_message("load_parcels() run complete")
 }
 
 load_addresses <- function(path, parcels, crs, muni_ids=NULL, quiet=FALSE) {
@@ -1606,7 +1643,8 @@ load_read_write_all <- function(
       "init_assess",
       load_assess(
         path=data_path,
-        gdb_path=file.path(data_path, gdb_path),
+        gdb_path=file.path(#data_path, 
+          gdb_path),
         muni_ids=muni_ids,
         most_recent=most_recent,
         quiet=quiet
@@ -1616,17 +1654,21 @@ load_read_write_all <- function(
       muni_ids=muni_ids,
       quiet=quiet
     )
+    util_log_message("run 1")
     # load_add_fk(util_conn(push_db), "init_assess", "munis", "site_muni_id", "muni_id")
     out[['assess']] <- assess
+    util_log_message("run 2")
   }
-
+  util_log_message("run 3")
   # Read Parcels
   if ("parcels" %in% tables) {
+    util_log_message("run 4")
     parcels <- load_read_write(
       util_conn(push_db),
       "parcels",
       loader=load_parcels(
-        gdb_path=file.path(data_path, gdb_path),
+        gdb_path=file.path(#data_path, 
+          gdb_path),
         muni_ids=muni_ids,
         assess=assess,
         block_groups=block_groups,
@@ -1638,16 +1680,19 @@ load_read_write_all <- function(
       refresh=refresh,
       muni_ids=muni_ids
     )
+    util_log_message("run 5")
     out[['parcels']] <- parcels
     # load_add_fk(util_conn(push_db), "init_assess", "parcels", "site_loc_id", "loc_id")
     # load_add_fk(util_conn(push_db), "parcels", "block_groups", "block_group_id", "id")
     # load_add_fk(util_conn(push_db), "parcels", "tracts", "tract_id", "id")
     # load_add_fk(util_conn(push_db), "parcels", "munis", "muni_id", "muni_id")
   }
+  util_log_message("run 6")
   rm(assess, block_groups) |> suppressWarnings()
   
   # Read Master Address File
   if ("init_addresses" %in% tables) {
+    util_log_message("run 7")
     addresses <- load_read_write(
       util_conn(push_db),
       "init_addresses",
@@ -1662,20 +1707,23 @@ load_read_write_all <- function(
       refresh=refresh,
       muni_ids=muni_ids
     )
+    util_log_message("run 8")
     out[['addresses']] <- addresses
     # load_add_fk(util_conn(push_db), "init_addresses", "munis", "muni_id", "muni_id")
     # load_add_fk(util_conn(push_db), "init_addresses", "parcels", "loc_id", "loc_id")
   }
   rm(addresses, parcels) |> suppressWarnings()
-  
+  util_log_message("run 9")
   # Read OpenCorpoates Companies
   if ("init_companies" %in% tables) {
     companies <- load_read_write(
       util_conn(push_db),
       "init_companies",
       load_oc_companies(
-        path=file.path(data_path, oc_path),
-        gdb_path=file.path(data_path, gdb_path),
+        path=file.path(#data_path, 
+          oc_path),
+        gdb_path=file.path(#data_path, 
+          gdb_path),
         muni_ids=muni_ids,
         most_recent=most_recent,
         quiet=quiet,
@@ -1693,7 +1741,8 @@ load_read_write_all <- function(
       util_conn(push_db),
       "init_officers",
       load_oc_officers(
-        path=file.path(data_path, oc_path),
+        path=file.path(#data_path, 
+          oc_path),
         companies=companies,
         quiet=quiet
       ),
@@ -1705,6 +1754,7 @@ load_read_write_all <- function(
   rm(officers, companies) |> suppressWarnings()
   
   out
+  util_log_message("load_read_write_all() run complete")
 }
 
 # Needs rework ====
