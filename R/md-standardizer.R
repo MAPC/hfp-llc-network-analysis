@@ -11,7 +11,7 @@ parcels <- sf::st_read(
 
 col_cw <- readr::read_csv("data/col_cw.csv")
 unit_cw <- readr::read_csv("data/unit_cw.csv")
-state <- "MD"
+state <- "MD" #this may be a problem
 
 lu_by_state <- function(state, cw_file = "unit_cw.csv", data_path = "data") {
   readr::read_csv(
